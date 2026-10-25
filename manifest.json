@@ -1,0 +1,15 @@
+{
+  "name": "Meine Bestzeiten",
+  "short_name": "Bestzeiten",
+  "description": "Schwimm-Bestzeiten und Wettkämpfe festhalten",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f8fb",
+  "theme_color": "#0a84b8",
+  "lang": "de",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

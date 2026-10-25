@@ -1,0 +1,1252 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a84b8">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg">
+<title>Meine Bestzeiten</title>
+<style>
+  :root {
+    --bg: #f2f8fb; --card: #ffffff; --ink: #0f2a3a; --muted: #5b7486; --line: #dbe8ef;
+    --accent: #0a84b8; --accent-soft: #e0f2fa; --pb: #f2643f; --pb-soft: #ffe9e2; --ok: #1f9d6b;
+    --shadow: 0 1px 2px rgba(15,42,58,.06), 0 4px 14px rgba(15,42,58,.06);
+    /* Schrift direkt auf dem Hintergrund (Überschrift, Zwischentitel) */
+    --head: var(--ink); --head-muted: var(--muted); --head-link: var(--accent);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1820; --card: #13252f; --ink: #e6f2f7; --muted: #8fa9b8; --line: #24404f;
+      --accent: #3bb3e6; --accent-soft: #163a4b; --pb: #ff8a6a; --pb-soft: #3d241d; --ok: #4fd39b;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  input, select, textarea { font: inherit; color: var(--ink); }
+
+  .top { padding: calc(18px + env(safe-area-inset-top)) 16px 6px; max-width: 560px; margin: 0 auto; }
+  .hello { color: var(--head-muted); font-size: 15px; }
+  h1 { margin: 2px 0 0; font-size: 28px; letter-spacing: -.02em; color: var(--head); }
+  main > .lbl, main > .empty, main > .small-text { color: var(--head-muted); }
+  #bgimg { position: fixed; inset: 0; z-index: -1; background-size: cover; background-position: center; display: none; }
+  body.has-photo #bgimg { display: block; }
+  body.has-photo .top, body.has-photo main > .lbl, body.has-photo main > .empty, body.has-photo main > .small-text, body.has-photo .back { text-shadow: 0 1px 4px rgba(0,0,0,.55); }
+  main { max-width: 560px; margin: 0 auto; padding: 8px 16px 24px; }
+
+  .seg { display: flex; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 4px; gap: 4px; margin: 8px 0 14px; }
+  .seg button { flex: 1; padding: 9px 6px; border-radius: 10px; font-weight: 600; color: var(--muted); line-height: 1.15; }
+  .seg button small { display: block; font-weight: 500; font-size: 12px; opacity: .8; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .seg.light button.on { background: var(--accent-soft); color: var(--accent); }
+
+  .card { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); border: 1px solid var(--line); margin-bottom: 14px; overflow: hidden; }
+  button.card { display: block; width: 100%; text-align: left; padding: 0; }
+  button.card:active { background: var(--accent-soft); }
+  .card h2 { font-size: 17px; margin: 0; padding: 14px 16px 6px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .count { margin-left: auto; font-size: 13px; color: var(--muted); font-weight: 500; }
+  .pad { padding: 14px 16px; }
+
+  .row { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 11px 16px; border-top: 1px solid var(--line); }
+  .card h2 + .row { border-top: 0; }
+  button.row:active { background: var(--accent-soft); }
+  .dist { width: 54px; font-weight: 700; font-size: 18px; color: var(--accent); white-space: nowrap; }
+  .dist small { font-size: 12px; font-weight: 600; margin-left: 1px; }
+  .mid { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .time { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .time.sm { font-size: 18px; }
+  .rname { font-weight: 600; }
+  .meta { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta.splits { font-size: 12px; font-variant-numeric: tabular-nums; }
+  button.row[data-act="edit"] .meta { white-space: normal; }
+  .right { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+  .badge { font-size: 11px; font-weight: 800; letter-spacing: .04em; color: var(--pb); background: var(--pb-soft); padding: 3px 7px; border-radius: 99px; }
+  .chev { color: var(--muted); font-size: 22px; }
+  .star { color: var(--pb); font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .slower { color: var(--muted); font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+  .empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+
+  .hero { padding: 18px 16px; text-align: center; }
+  .hero .what { color: var(--muted); font-weight: 600; }
+  .hero .big { font-size: 46px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: var(--accent); }
+  .hero .mname { font-size: 24px; font-weight: 800; letter-spacing: -.01em; margin-top: 2px; }
+  .hero .since { color: var(--muted); font-size: 14px; }
+  .stats { display: flex; justify-content: center; gap: 28px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .stats b { display: block; font-size: 26px; color: var(--accent); line-height: 1.1; }
+  .stats .pbs b { color: var(--pb); }
+  .improve { margin: 10px auto 0; display: inline-block; background: var(--pb-soft); color: var(--pb); font-weight: 700; padding: 5px 12px; border-radius: 99px; font-size: 14px; }
+  .back { color: var(--head-link); font-weight: 600; padding: 4px 0 10px; }
+  svg.chart { width: 100%; height: auto; display: block; }
+
+  .card.meet { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+  .meet .d { font-size: 13px; color: var(--muted); }
+  .meet .p { font-size: 17px; font-weight: 700; }
+  .meet .s { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .meet .info { flex: 1; min-width: 0; }
+  .year-chips { margin: 0 0 14px; }
+
+  .top-btn { margin: 4px 0 18px; }
+  .cd { color: var(--pb); font-weight: 700; }
+  .card.next { border-color: var(--pb); margin-top: 8px; }
+  .lbl.day { text-transform: capitalize; font-size: 15px; margin: 20px 0 8px; }
+  main > .lbl.day { color: var(--head); }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--line); }
+  .sw.on, .preset.on i { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .sw.custom { position: relative; overflow: hidden; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+  .sw.custom input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .preset { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 66px; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .preset i { display: block; width: 50px; height: 50px; border-radius: 14px; border: 1px solid var(--line); }
+  .colorrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .colorrow:first-of-type { border-top: 0; }
+  .colorrow span small { display: block; font-size: 12px; color: var(--muted); }
+  .colorrow input[type=color] { width: 54px; height: 38px; padding: 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+  .photo-thumb { height: 130px; border-radius: 12px; background-size: cover; background-position: center; margin: 10px 0 6px; border: 1px solid var(--line); }
+  input[type=range], label input[type=range] { width: 100%; padding: 0; border: 0; background: none; accent-color: var(--accent); }
+  .card h3 { font-size: 15px; margin: 16px 0 8px; }
+  .welcome { text-align: center; margin-top: 10px; }
+  .welcome .big { font-size: 56px; line-height: 1; }
+  .welcome h2 { justify-content: center; font-size: 24px; padding: 8px 0 4px; }
+  .welcome p { color: var(--muted); margin: 8px 0; }
+  .start-head { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 12px 14px 10px; }
+  .wk { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 50px; height: 50px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; line-height: 1.1; }
+  .wk b { font-size: 20px; }
+  .pen { font-size: 16px; opacity: .7; }
+  .ticket { display: flex; gap: 10px; padding: 0 14px 12px; }
+  .ticket span { flex: 1; text-align: center; background: var(--bg); border: 1px dashed var(--line); border-radius: 12px; padding: 6px 4px 4px; }
+  .ticket small { display: block; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  .ticket b { font-size: 28px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .go { display: block; width: calc(100% - 28px); margin: 0 14px 14px; padding: 12px; border-radius: 12px; background: var(--pb); color: #fff; font-weight: 700; font-size: 16px; }
+  .three { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .two.even { grid-template-columns: 1fr 1fr; }
+  .top-btn + .top-btn { margin-top: -8px; }
+  .steps { margin: 10px 0 4px; padding-left: 22px; font-size: 14px; color: var(--muted); }
+  .steps li { margin-bottom: 4px; }
+  .warn { color: var(--pb); font-weight: 600; font-size: 14px; }
+  .wk.sm { min-width: 40px; height: 40px; font-size: 10px; }
+  .wk.sm b { font-size: 16px; }
+  .card.list { margin: 0 0 4px; }
+  .mrow { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--line); }
+  .mrow:first-child { border-top: 0; }
+  .mrow .n { flex: 1; min-width: 0; font-weight: 600; }
+  .mrow .n small { display: block; font-weight: 400; font-size: 13px; color: var(--muted); }
+
+  label, .lbl { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 14px 0 6px; }
+  label input, label select, textarea {
+    display: block; width: 100%; margin-top: 6px; padding: 11px 12px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--bg);
+  }
+  .two { display: grid; grid-template-columns: 1fr 96px; gap: 10px; }
+  textarea { min-height: 120px; font-size: 13px; font-family: ui-monospace, Consolas, monospace; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chips button { padding: 8px 12px; border-radius: 99px; border: 1px solid var(--line); background: var(--card); font-weight: 600; font-size: 15px; }
+  .sheet .chips button { background: var(--bg); }
+  .chips button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .timein { display: flex; align-items: center; gap: 6px; }
+  .timein input { width: 74px; text-align: center; font-size: 28px; font-weight: 700; padding: 8px 4px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); font-variant-numeric: tabular-nums; }
+  .timein span { font-size: 28px; font-weight: 700; color: var(--muted); }
+  .timein .u { display: flex; flex-direction: column; align-items: center; font-size: 11px; color: var(--muted); gap: 3px; }
+  .hint { min-height: 20px; font-size: 14px; color: var(--muted); margin-top: 10px; }
+  .hint b { color: var(--accent); }
+  .primary { display: block; width: 100%; margin-top: 18px; padding: 14px; border-radius: 14px; background: var(--accent); color: #fff; font-weight: 700; font-size: 17px; }
+  .secondary { display: block; width: 100%; margin-top: 10px; padding: 12px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .danger { color: #d33; background: transparent; border: 1px solid var(--line); }
+  .small-text { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
+
+  .fab {
+    position: fixed; right: max(16px, calc(50% - 264px)); bottom: calc(86px + env(safe-area-inset-bottom));
+    width: 60px; height: 60px; border-radius: 50%; background: var(--pb); color: #fff; font-size: 34px; line-height: 1;
+    box-shadow: 0 6px 18px rgba(242,100,63,.4); z-index: 5;
+  }
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: flex; justify-content: center;
+    background: var(--card); border-top: 1px solid var(--line); padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  }
+  .tabs button { flex: 1; max-width: 180px; padding: 6px 4px; color: var(--muted); font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .tabs button span { font-size: 22px; filter: grayscale(1); opacity: .7; }
+  .tabs button.on { color: var(--accent); }
+  .tabs button.on span { filter: none; opacity: 1; }
+
+  .sheet { position: fixed; inset: 0; z-index: 20; background: rgba(5,20,30,.45); display: flex; align-items: flex-end; justify-content: center; }
+  .sheet-card { background: var(--card); width: 100%; max-width: 560px; max-height: 92vh; overflow-y: auto; border-radius: 22px 22px 0 0; padding: 16px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; }
+  .sheet-head h2 { margin: 0; font-size: 22px; }
+  .sheet-head button { font-size: 22px; color: var(--muted); padding: 4px 8px; }
+  .hidden { display: none !important; }
+
+  .toast { position: fixed; left: 16px; right: 16px; bottom: calc(160px + env(safe-area-inset-bottom)); z-index: 30; max-width: 520px; margin: 0 auto; background: var(--ink); color: var(--bg); padding: 12px 16px; border-radius: 14px; font-weight: 600; text-align: center; }
+
+  .party { position: fixed; inset: 0; z-index: 40; background: rgba(5,20,30,.6); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 16px; }
+  .party i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+  .party-card { position: relative; background: var(--card); border-radius: 24px; padding: 26px 22px 20px; text-align: center; width: 100%; max-width: 360px; animation: pop .45s cubic-bezier(.2,1.6,.4,1); }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } }
+  .party-card .big { font-size: 64px; line-height: 1; }
+  .party-card h2 { margin: 8px 0 4px; font-size: 28px; color: var(--pb); }
+  .party-card .what { margin: 0; color: var(--muted); font-weight: 600; }
+  .party-card .ptime { font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums; margin: 6px 0; }
+  .party-card .pdiff { margin: 0; color: var(--ok); font-weight: 700; }
+  @media (prefers-reduced-motion: reduce) { .party i { display: none; } .party-card { animation: none; } }
+</style>
+</head>
+<body>
+<div id="bgimg"></div>
+<header class="top">
+  <div class="hello" id="hello">Hallo 👋</div>
+  <h1 id="title">Meine Bestzeiten</h1>
+</header>
+<main id="view"></main>
+
+<button class="fab" id="fab" aria-label="Neue Zeit eintragen">+</button>
+<nav class="tabs">
+  <button data-tab="best"><span>🏅</span>Bestzeiten</button>
+  <button data-tab="plan"><span>📅</span>Geplant</button>
+  <button data-tab="results"><span>📋</span>Ergebnisse</button>
+  <button data-tab="more"><span>⚙️</span>Einstellungen</button>
+</nav>
+
+<div id="sheet" class="sheet hidden"></div>
+<div id="party" class="party hidden"></div>
+<div id="toast" class="toast hidden"></div>
+<input type="file" id="m-file" accept="application/json,.json" class="hidden">
+
+<script>
+const STROKES = {
+  F:  { n: 'Freistil',      e: '🌊' },
+  R:  { n: 'Rücken',        e: '🙃' },
+  B:  { n: 'Brust',         e: '🐸' },
+  S:  { n: 'Schmetterling', e: '🦋' },
+  L:  { n: 'Lagen',         e: '🔄' },
+  DB: { n: 'Delfinbeine',   e: '🐬' },
+  BB: { n: 'Brustbeine',    e: '🦵' },
+};
+const ORDER = ['F', 'R', 'B', 'S', 'L', 'DB', 'BB'];
+const DISTS = [25, 50, 100, 200, 400, 800, 1500];
+const COURSE_NAME = { SC: 'Kurzbahn', LC: 'Langbahn' };
+const KEY = 'bestzeiten.v1';
+
+// Startdaten: alle Ergebnisse von der Vereinsseite (Stand 25.10.2026) plus ältere Zeiten aus dem Bestzeiten-PDF
+const SEED_DATA = [];
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+
+// ---------- Zeiten ----------
+function parseTime(s) {
+  const m = String(s).trim().match(/^(?:(\d{1,2}):)?(\d{1,2})[,.](\d{1,2})$/);
+  if (!m) return null;
+  const sec = +m[2];
+  if (sec > 59) return null;
+  const hun = m[3].length === 1 ? +m[3] * 10 : +m[3];
+  return ((+m[1] || 0) * 60 + sec) * 100 + hun;
+}
+function fmt(c) {
+  const mi = Math.floor(c / 6000), se = Math.floor(c / 100) % 60, hu = String(c % 100).padStart(2, '0');
+  return mi ? `${mi}:${String(se).padStart(2, '0')},${hu}` : `${se},${hu}`;
+}
+const fmtDiff = c => (c / 100).toFixed(2).replace('.', ',') + ' s';
+const fmtDate = d => d.split('-').reverse().join('.');
+function fmtRange(a, b) {
+  if (a === b) return fmtDate(a);
+  if (a.slice(0, 7) === b.slice(0, 7)) return `${a.slice(8)}.–${fmtDate(b)}`;
+  return `${fmtDate(a).slice(0, 6)}–${fmtDate(b)}`;
+}
+const daysBetween = (a, b) => (Date.parse(b) - Date.parse(a)) / 864e5;
+const raceName = r => `${r.dist} m ${STROKES[r.stroke].n}`;
+
+// ---------- Import aus Text (Vereins-Homepage / PDF) ----------
+function parseText(text, defCourse = 'SC') {
+  let course = defCourse;
+  const rows = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (/kurzbahn/i.test(line)) { course = 'SC'; continue; }
+    if (/langbahn/i.test(line)) { course = 'LC'; continue; }
+    if (/freiwasser/i.test(line)) { course = null; continue; }
+    const m = line.match(/^(\d{2,4})\s*m?\s+([A-Za-z]{1,2})\s+(\d{1,2}:\d{2}[,.]\d{1,2})\s+(\d{1,2})\.(\d{1,2})\.(\d{4})\s*(.*)$/);
+    if (!m || !course) continue;
+    const stroke = m[2].toUpperCase();
+    const time = parseTime(m[3]);
+    if (!STROKES[stroke] || time == null) continue;
+    rows.push({
+      course, stroke, dist: +m[1], time,
+      date: `${m[6]}-${m[5].padStart(2, '0')}-${m[4].padStart(2, '0')}`,
+      place: m[7].trim(), meet: '',
+    });
+  }
+  return rows;
+}
+const rowKey = r => [r.course, r.stroke, r.dist, r.date, r.time].join('|');
+function addRows(s, rows) {
+  const seen = new Set(s.results.map(rowKey)), ids = new Set(s.results.map(r => r.id));
+  let n = 0;
+  for (const r of rows) {
+    const k = rowKey(r);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const x = {
+      id: r.id && !ids.has(r.id) ? r.id : uid(), course: r.course, stroke: r.stroke, dist: +r.dist, time: +r.time, date: r.date,
+      place: r.place || '', meet: r.meet || '', rank: r.rank ? +r.rank : null,
+    };
+    if (r.heat) x.heat = +r.heat;
+    if (r.rec) x.rec = r.rec;
+    if (Array.isArray(r.splits)) x.splits = r.splits;
+    s.results.push(x);
+    n++;
+  }
+  return n;
+}
+
+// ---------- Speicher ----------
+const DEFAULT_NAME = '';
+const SEED_VERSION = 2;
+function load() {
+  let old = null;
+  try { old = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  if (old && Array.isArray(old.results) && old.seed === SEED_VERSION) return old;
+  const s = { version: 1, seed: SEED_VERSION, name: (old && old.name) || DEFAULT_NAME, results: [], plans: (old && old.plans) || [] };
+  if (old && old.theme) s.theme = old.theme;
+  if (old && old.fullName) s.fullName = old.fullName;
+  addRows(s, SEED_DATA);
+  // Selbst eingetragene Zeiten aus der vorherigen Version behalten
+  if (old && Array.isArray(old.results)) {
+    const k = r => [r.course, r.stroke, r.dist, r.time].join('|');
+    const known = new Set(s.results.map(k));
+    addRows(s, old.results.filter(r => !known.has(k(r))));
+  }
+  return s;
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+let state = load();
+state.plans = state.plans || [];
+save();
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {}
+
+const ui = { tab: 'best', course: 'SC', resView: 'meets', year: 'all', detail: null, meet: null, plan: null };
+const form = { course: 'SC', stroke: 'F', dist: 100, day: null };
+let editId = null;
+let sheetMode = 'result'; // result | plan | start
+let linkTo = null;        // geplanter Start, zu dem die gerade eingetragene Zeit gehört
+let lastEntry = null; // zuletzt eingegebener Wettkampf, damit mehrere Starts schnell nacheinander gehen
+
+// ---------- Auswertung ----------
+function bestMap(course) {
+  const m = {};
+  for (const r of state.results) {
+    if (r.course !== course) continue;
+    const k = r.stroke + '|' + r.dist, b = m[k];
+    if (!b || r.time < b.time || (r.time === b.time && r.date < b.date)) m[k] = r;
+  }
+  return m;
+}
+function bestOf(course, stroke, dist) {
+  return bestMap(course)[stroke + '|' + dist] || null;
+}
+// Für jede Zeit: war es zum Zeitpunkt eine neue Bestzeit? Wie weit weg von der damaligen Bestzeit?
+function pbFlags() {
+  const sorted = [...state.results].sort((a, b) => a.date.localeCompare(b.date) || b.time - a.time);
+  const best = {}, flags = {};
+  for (const r of sorted) {
+    const k = r.course + '|' + r.stroke + '|' + r.dist, p = best[k];
+    if (p == null || r.time < p) { flags[r.id] = { pb: true, diff: p == null ? null : p - r.time }; best[k] = r.time; }
+    else flags[r.id] = { pb: false, diff: r.time - p };
+  }
+  return flags;
+}
+// Wettkämpfe: gleicher Name (oder Ort) an aufeinanderfolgenden Tagen = ein Wettkampf
+function meetGroups() {
+  const sorted = [...state.results].sort((a, b) => a.date.localeCompare(b.date));
+  const groups = [], open = {};
+  for (const r of sorted) {
+    const name = (r.meet || r.place || 'Ohne Ort').trim(), k = name.toLowerCase();
+    const g = open[k];
+    if (g && daysBetween(g.to, r.date) <= 3) { g.results.push(r); g.to = r.date; }
+    else { open[k] = { id: k + '|' + r.date, name, from: r.date, to: r.date, results: [r] }; groups.push(open[k]); }
+  }
+  for (const g of groups) {
+    g.places = [...new Set(g.results.map(r => r.place).filter(Boolean))];
+    g.courses = [...new Set(g.results.map(r => COURSE_NAME[r.course]))].join(' / ');
+    g.hasName = g.results.some(r => r.meet);
+  }
+  return groups.reverse();
+}
+const sortRaces = (a, b) => a.date.localeCompare(b.date) || ORDER.indexOf(a.stroke) - ORDER.indexOf(b.stroke) || a.dist - b.dist;
+
+// ---------- Ansichten ----------
+function courseSeg(light) {
+  return `<div class="seg${light ? ' light' : ''}">${['SC', 'LC'].map(c =>
+    `<button data-act="course" data-v="${c}" class="${ui.course === c ? 'on' : ''}">${COURSE_NAME[c]}<small>${c === 'SC' ? '25-m-Becken' : '50-m-Becken'}</small></button>`).join('')}</div>`;
+}
+const pbBadge = f => f.pb ? `<span class="star">★ Bestzeit</span>` : `<span class="slower">+${fmtDiff(f.diff)}</span>`;
+// Platz, Finale, Vereinsrekord als kurze Zusatzangaben
+const extras = r => [r.rank ? `Platz ${r.rank}` : '', r.heat ? 'Finale' : '', r.rec === 'VR' ? '🏆 Vereinsrekord' : ''].filter(Boolean);
+// Zwischenzeiten als Abschnittszeiten, z. B. „41,02 / 45,07“
+function splitsHTML(r) {
+  if (!r.splits || r.splits.length < 2) return '';
+  const laps = r.splits.map(([, t], i) => fmt(i ? t - r.splits[i - 1][1] : t));
+  return `<span class="meta splits">⏱ ${r.splits[0][0]}er: ${laps.join(' / ')}</span>`;
+}
+
+function bestHTML() {
+  if (!state.results.length && !state.plans.length) {
+    return `<section class="card pad welcome">
+      <div class="big">🏊‍♀️</div>
+      <h2>Willkommen!</h2>
+      <p>Hier hältst du deine Schwimmzeiten, Bestzeiten und Wettkämpfe fest.</p>
+      <p><b>Du hast schon eine Sicherungsdatei?</b> Dann hol dir damit alle deine Zeiten zurück.</p>
+      <button class="primary" data-act="import-file">📥 Sicherung einlesen</button>
+      <button class="secondary" data-act="goto-more">Name eintragen und loslegen</button>
+    </section>`;
+  }
+  const m = bestMap(ui.course), all = Object.values(m), np = nextPlan();
+  let h = np && daysBetween(today(), np.from) <= 21 ? `<button class="card meet next" data-act="goto-plan" data-id="${np.id}">
+    <span class="info"><div class="d">📅 Nächster Wettkampf · <b class="cd">${countdown(np)}</b></div><div class="p">${esc(np.meet)}</div>
+    <div class="s">${np.starts.length} ${np.starts.length === 1 ? 'Start' : 'Starts'}</div></span><span class="chev">›</span></button>` : '';
+  h += courseSeg();
+  if (!all.length) return h + `<div class="empty">Noch keine Zeiten auf der ${COURSE_NAME[ui.course]}.<br>Tippe auf <b>+</b>, um deine erste Zeit einzutragen.</div>`;
+  const recent = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
+  for (const st of ORDER) {
+    const rows = all.filter(r => r.stroke === st).sort((a, b) => a.dist - b.dist);
+    if (!rows.length) continue;
+    h += `<section class="card"><h2><span>${STROKES[st].e}</span>${STROKES[st].n}</h2>`;
+    for (const r of rows) {
+      h += `<button class="row" data-act="detail" data-k="${r.course}|${r.stroke}|${r.dist}">
+        <span class="dist">${r.dist}<small>m</small></span>
+        <span class="mid"><span class="time">${fmt(r.time)}</span><span class="meta">${fmtDate(r.date)} · ${esc(r.place)}</span></span>
+        ${r.date >= recent ? '<span class="badge">NEU</span>' : ''}<span class="chev">›</span></button>`;
+    }
+    h += `</section>`;
+  }
+  return h;
+}
+
+function resultsHTML() {
+  let h = `<div class="seg">
+    <button data-act="resview" data-v="meets" class="${ui.resView === 'meets' ? 'on' : ''}">🏊‍♀️ Wettkämpfe</button>
+    <button data-act="resview" data-v="disc" class="${ui.resView === 'disc' ? 'on' : ''}">🎯 Disziplinen</button></div>`;
+  return h + (ui.resView === 'meets' ? meetsHTML() : discHTML());
+}
+
+function meetsHTML() {
+  const groups = meetGroups();
+  if (!groups.length) return `<div class="empty">Noch keine Wettkämpfe eingetragen.</div>`;
+  const years = [...new Set(groups.map(g => g.to.slice(0, 4)))].sort().reverse();
+  if (ui.year !== 'all' && !years.includes(ui.year)) ui.year = 'all';
+  const shown = ui.year === 'all' ? groups : groups.filter(g => g.to.startsWith(ui.year));
+  const flags = pbFlags();
+  let h = `<div class="chips year-chips">${['all', ...years].map(y =>
+    `<button data-act="year" data-v="${y}" class="${ui.year === y ? 'on' : ''}">${y === 'all' ? 'Alle' : y}</button>`).join('')}</div>`;
+  for (const g of shown) {
+    const pbs = g.results.filter(r => flags[r.id].pb).length, n = g.results.length;
+    const sub = g.hasName && g.places.length ? `<div class="s">${esc(g.places.join(', '))}</div>` : '';
+    h += `<button class="card meet" data-act="meet" data-id="${esc(g.id)}">
+      <span class="info"><div class="d">${fmtRange(g.from, g.to)} · ${g.courses}</div>
+        <div class="p">${esc(g.name)}</div>${sub}
+        <div class="s">${n} ${n === 1 ? 'Start' : 'Starts'}${pbs ? ` · ${pbs} ${pbs === 1 ? 'Bestzeit' : 'Bestzeiten'} 🏅` : ''}</div></span>
+      <span class="chev">›</span></button>`;
+  }
+  return h;
+}
+
+function discHTML() {
+  let h = courseSeg(true);
+  const list = state.results.filter(r => r.course === ui.course);
+  if (!list.length) return h + `<div class="empty">Noch keine Zeiten auf der ${COURSE_NAME[ui.course]}.</div>`;
+  const m = bestMap(ui.course);
+  for (const st of ORDER) {
+    const dists = [...new Set(list.filter(r => r.stroke === st).map(r => r.dist))].sort((a, b) => a - b);
+    if (!dists.length) continue;
+    h += `<section class="card"><h2><span>${STROKES[st].e}</span>${STROKES[st].n}</h2>`;
+    for (const d of dists) {
+      const rs = list.filter(r => r.stroke === st && r.dist === d);
+      const lastDate = rs.reduce((a, r) => r.date > a ? r.date : a, '');
+      h += `<button class="row" data-act="detail" data-k="${ui.course}|${st}|${d}">
+        <span class="dist">${d}<small>m</small></span>
+        <span class="mid"><span class="rname">${rs.length} ${rs.length === 1 ? 'Start' : 'Starts'}</span><span class="meta">zuletzt ${fmtDate(lastDate)}</span></span>
+        <span class="right"><span class="time sm">${fmt(m[st + '|' + d].time)}</span><span class="meta">Bestzeit</span></span>
+        <span class="chev">›</span></button>`;
+    }
+    h += `</section>`;
+  }
+  return h;
+}
+
+function meetDetailHTML() {
+  const g = meetGroups().find(x => x.id === ui.meet);
+  if (!g) { ui.meet = null; return resultsHTML(); }
+  const flags = pbFlags();
+  const rs = [...g.results].sort(sortRaces);
+  const pbs = rs.filter(r => flags[r.id].pb).length;
+  const multiDay = g.from !== g.to, mixed = g.courses.includes('/');
+  let h = `<button class="back" data-act="back">‹ Alle Wettkämpfe</button>
+    <section class="card hero">
+      <div class="what">${fmtRange(g.from, g.to)} · ${g.courses}</div>
+      <div class="mname">${esc(g.name)}</div>
+      ${g.hasName && g.places.length ? `<div class="since">${esc(g.places.join(', '))}</div>` : ''}
+      <div class="stats"><span><b>${rs.length}</b>${rs.length === 1 ? 'Start' : 'Starts'}</span><span class="pbs"><b>${pbs}</b>${pbs === 1 ? 'Bestzeit' : 'Bestzeiten'}</span></div>
+    </section>
+    <section class="card"><h2>Ergebnisse</h2>`;
+  for (const r of rs) {
+    const meta = [multiDay ? fmtDate(r.date) : '', mixed ? COURSE_NAME[r.course] : '', ...extras(r)].filter(Boolean).join(' · ');
+    h += `<button class="row" data-act="edit" data-id="${r.id}">
+      <span class="mid"><span class="rname">${STROKES[r.stroke].e} ${raceName(r)}</span>${meta ? `<span class="meta">${meta}</span>` : ''}${splitsHTML(r)}</span>
+      <span class="right"><span class="time sm">${fmt(r.time)}</span>${pbBadge(flags[r.id])}</span></button>`;
+  }
+  return h + `</section>
+    <button class="secondary" data-act="add-to-meet">+ Weitere Zeit zu diesem Wettkampf</button>
+    <button class="secondary" data-act="rename-meet">✏️ Wettkampf benennen</button>
+    <p class="small-text">Tippe auf eine Zeit, um sie zu ändern oder Platz einzutragen.</p>`;
+}
+
+function chartSVG(list) {
+  const pts = [...list].sort((a, b) => a.date.localeCompare(b.date));
+  const W = 340, H = 170, L = 52, R = 14, T = 16, B = 26;
+  const xs = pts.map(p => Date.parse(p.date)), ys = pts.map(p => p.time);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const X = t => x1 === x0 ? (L + W - R) / 2 : L + (t - x0) / (x1 - x0) * (W - L - R);
+  const Y = v => y1 === y0 ? (T + H - B) / 2 : T + (v - y0) / (y1 - y0) * (H - T - B); // schneller = weiter oben
+  const flags = pbFlags();
+  const line = pts.map((p, i) => `${X(xs[i]).toFixed(1)},${Y(p.time).toFixed(1)}`).join(' ');
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Zeitverlauf">`;
+  s += `<line x1="${L}" x2="${W - R}" y1="${Y(y0)}" y2="${Y(y0)}" stroke="var(--line)" stroke-dasharray="3 4"/>`;
+  s += `<line x1="${L}" x2="${W - R}" y1="${Y(y1)}" y2="${Y(y1)}" stroke="var(--line)" stroke-dasharray="3 4"/>`;
+  s += `<text x="${L - 6}" y="${Y(y0) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(y0)}</text>`;
+  if (y1 !== y0) s += `<text x="${L - 6}" y="${Y(y1) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(y1)}</text>`;
+  s += `<text x="${X(x0)}" y="${H - 6}" text-anchor="${x1 === x0 ? 'middle' : 'start'}" font-size="11" fill="var(--muted)">${fmtDate(pts[0].date).slice(3)}</text>`;
+  if (x1 !== x0) s += `<text x="${X(x1)}" y="${H - 6}" text-anchor="end" font-size="11" fill="var(--muted)">${fmtDate(pts[pts.length - 1].date).slice(3)}</text>`;
+  s += `<polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  pts.forEach((p, i) => {
+    const pb = flags[p.id] && flags[p.id].pb;
+    s += `<circle cx="${X(xs[i])}" cy="${Y(p.time)}" r="${pb ? 5 : 4}" fill="${pb ? 'var(--pb)' : 'var(--card)'}" stroke="${pb ? 'var(--pb)' : 'var(--accent)'}" stroke-width="2"/>`;
+  });
+  return s + `</svg>`;
+}
+
+function detailHTML() {
+  const [c, st, d] = ui.detail.split('|');
+  const list = state.results.filter(r => r.course === c && r.stroke === st && r.dist === +d).sort((a, b) => b.date.localeCompare(a.date) || a.time - b.time);
+  if (!list.length) { ui.detail = null; return ui.tab === 'best' ? bestHTML() : resultsHTML(); }
+  const best = list.reduce((a, b) => b.time < a.time ? b : a);
+  const oldest = list[list.length - 1];
+  const flags = pbFlags();
+  let h = `<button class="back" data-act="back">‹ Zurück</button>
+    <section class="card hero">
+      <div class="what">${STROKES[st].e} ${raceName(best)} · ${COURSE_NAME[c]}</div>
+      <div class="big">${fmt(best.time)}</div>
+      <div class="since">Bestzeit vom ${fmtDate(best.date)} · ${esc(best.meet || best.place)}</div>
+      ${list.length > 1 && oldest.time > best.time ? `<div class="improve">Seit ${fmtDate(oldest.date).slice(6)} um ${fmtDiff(oldest.time - best.time)} schneller 🚀</div>` : ''}
+    </section>`;
+  if (list.length > 1) h += `<section class="card"><h2>Verlauf</h2><div class="pad">${chartSVG(list)}</div></section>`;
+  h += `<section class="card"><h2>Alle Zeiten<span class="count">${list.length}</span></h2>`;
+  for (const r of list) {
+    const meta = [fmtDate(r.date), esc(r.meet || r.place), ...extras(r)].filter(Boolean).join(' · ');
+    h += `<button class="row" data-act="edit" data-id="${r.id}">
+      <span class="mid"><span class="time sm">${fmt(r.time)}</span><span class="meta">${meta}</span>${splitsHTML(r)}</span>
+      ${pbBadge(flags[r.id])}</button>`;
+  }
+  return h + `</section><p class="small-text">Tippe auf eine Zeit, um sie zu ändern oder zu löschen.</p>`;
+}
+
+// ---------- Aussehen ----------
+const BG_KEY = 'bestzeiten.bgphoto'; // Foto getrennt gespeichert, damit Sicherungen klein bleiben
+const STANDARD = { n: 'Standard', bg: '#f2f8fb', card: '#ffffff', ink: '#0f2a3a', head: '#0f2a3a', accent: '#0a84b8', pb: '#f2643f' };
+const PRESETS = {
+  lagune: { n: 'Lagune', bg: '#d9f5f0', card: '#ffffff', ink: '#0d3b36', head: '#0d3b36', accent: '#0e9f8e', pb: '#ff7a45' },
+  sonne:  { n: 'Sonne',  bg: '#fff0e6', card: '#ffffff', ink: '#3a1f12', head: '#3a1f12', accent: '#e8590c', pb: '#d6336c' },
+  beere:  { n: 'Beere',  bg: '#f8e8f5', card: '#ffffff', ink: '#3b1236', head: '#3b1236', accent: '#b5179e', pb: '#f77f00' },
+  lila:   { n: 'Lila',   bg: '#ece8fb', card: '#ffffff', ink: '#231a4a', head: '#231a4a', accent: '#6741d9', pb: '#f03e3e' },
+  wald:   { n: 'Wald',   bg: '#e6f4ea', card: '#ffffff', ink: '#16351f', head: '#16351f', accent: '#2b8a3e', pb: '#f08c00' },
+  nacht:  { n: 'Nacht',  bg: '#0b1820', card: '#13252f', ink: '#e6f2f7', head: '#e6f2f7', accent: '#3bb3e6', pb: '#ff8a6a' },
+};
+const BG_COLORS = ['#f2f8fb', '#dff1fa', '#d9f5f0', '#fde2e4', '#fff3bf', '#d3f9d8', '#e5dbff', '#13252f', '#0b1820', '#212529'];
+const COLOR_FIELDS = [
+  ['accent', 'Akzentfarbe', 'Knöpfe, Zeiten, Markierungen'],
+  ['pb', 'Bestzeit-Farbe', 'Sterne, Plus-Knopf, „NEU“'],
+  ['card', 'Feldfarbe', 'Hintergrund der Felder und Karten'],
+  ['ink', 'Schrift in den Feldern', ''],
+  ['head', 'Schrift auf dem Hintergrund', 'Überschrift und Zwischentitel'],
+];
+const darkMode = () => !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+const curTheme = () => state.theme || { ...(darkMode() ? PRESETS.nacht : STANDARD), dim: 30, photo: false, preset: null };
+function bgPhoto() {
+  try { return state.theme && state.theme.photo ? localStorage.getItem(BG_KEY) : null; } catch (e) { return null; }
+}
+function applyTheme() {
+  const t = state.theme, root = document.documentElement.style, photo = bgPhoto();
+  ['--bg', '--card', '--ink', '--muted', '--line', '--accent', '--accent-soft', '--pb', '--pb-soft', '--head', '--head-muted', '--head-link'].forEach(v => root.removeProperty(v));
+  if (t) {
+    const mix = (a, p, b) => `color-mix(in srgb, ${a} ${p}%, ${b})`;
+    Object.entries({
+      '--bg': t.bg, '--card': t.card, '--ink': t.ink, '--accent': t.accent, '--pb': t.pb, '--head': t.head,
+      '--muted': mix(t.ink, 62, t.card), '--line': mix(t.ink, 14, t.card),
+      '--accent-soft': mix(t.accent, 16, t.card), '--pb-soft': mix(t.pb, 16, t.card),
+      '--head-muted': mix(t.head, 78, t.bg), '--head-link': photo ? t.head : t.accent,
+    }).forEach(([k, v]) => root.setProperty(k, v));
+  }
+  const dim = photo ? (t.dim || 0) / 100 : 0;
+  document.body.classList.toggle('has-photo', !!photo);
+  $('#bgimg').style.backgroundImage = photo ? `linear-gradient(rgba(0,0,0,${dim}), rgba(0,0,0,${dim})), url(${photo})` : '';
+  document.querySelector('meta[name=theme-color]').setAttribute('content', t ? t.accent : '#0a84b8');
+}
+function setTheme(patch) { state.theme = { ...curTheme(), ...patch }; save(); applyTheme(); }
+function removePhoto() { try { localStorage.removeItem(BG_KEY); } catch (e) {} }
+// Foto verkleinern (max. 1280 px), damit es in den Handyspeicher der App passt
+function loadPhoto(file) {
+  const img = new Image(), url = URL.createObjectURL(file);
+  img.onload = () => {
+    const s = Math.min(1, 1280 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    try { localStorage.setItem(BG_KEY, c.toDataURL('image/jpeg', 0.75)); }
+    catch (e) { return toast('Das Foto ist zu groß. Bitte ein anderes wählen.'); }
+    // Beim ersten Foto: Schrift auf dem Hintergrund weiß, damit sie auf dem Foto lesbar bleibt
+    const t = curTheme();
+    setTheme(t.photo ? { photo: true } : { photo: true, dim: 30, head: '#ffffff' });
+    render(); toast('Hintergrundfoto gesetzt ✓');
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('Dieses Bild kann nicht geöffnet werden.'); };
+  img.src = url;
+}
+
+function themeHTML() {
+  const t = curTheme(), custom = !!state.theme, photo = bgPhoto();
+  const presetBtn = (k, p) => `<button class="preset${(k === 'standard' ? !custom || t.preset === 'standard' : t.preset === k) ? ' on' : ''}" data-act="preset" data-v="${k}">
+    <i style="background:linear-gradient(135deg, ${p.bg} 0 45%, ${p.accent} 45% 75%, ${p.pb} 75%)"></i>${p.n}</button>`;
+  return `<section class="card pad">
+    <h2 style="padding:0">🎨 Aussehen</h2>
+    <h3>Farbthema</h3>
+    <div class="swatches">${presetBtn('standard', STANDARD)}${Object.entries(PRESETS).map(([k, p]) => presetBtn(k, p)).join('')}</div>
+    <h3>Hintergrund</h3>
+    <div class="swatches">${BG_COLORS.map(c => `<button class="sw${custom && !photo && t.bg === c ? ' on' : ''}" style="background:${c}" data-act="bgcolor" data-v="${c}" aria-label="Hintergrundfarbe"></button>`).join('')}
+      <span class="sw custom${custom && !photo && !BG_COLORS.includes(t.bg) ? ' on' : ''}" title="Eigene Farbe"><input type="color" data-theme-key="bg" value="${t.bg}" aria-label="Eigene Hintergrundfarbe"></span></div>
+    ${photo ? `<div class="photo-thumb" style="background-image:url(${photo})"></div>
+      <label>Foto abdunkeln<input type="range" min="0" max="70" step="5" data-theme-key="dim" value="${t.dim || 0}"></label>
+      <button class="secondary" data-act="pick-photo">Anderes Foto wählen</button>
+      <button class="secondary danger" data-act="del-photo">Foto entfernen</button>`
+    : `<button class="secondary" data-act="pick-photo">📷 Foto als Hintergrund wählen</button>`}
+    <input type="file" id="m-photo" accept="image/*" class="hidden">
+    <h3>Farben</h3>
+    ${COLOR_FIELDS.map(([k, label, hint]) => `<div class="colorrow"><span>${label}${hint ? `<small>${hint}</small>` : ''}</span>
+      <input type="color" data-theme-key="${k}" value="${t[k]}" aria-label="${label}"></div>`).join('')}
+    ${custom ? `<button class="secondary" data-act="theme-reset">Alles auf Standard zurücksetzen</button>` : ''}
+  </section>`;
+}
+
+function moreHTML() {
+  const sc = state.results.filter(r => r.course === 'SC').length, lc = state.results.length - sc;
+  return `
+  <section class="card pad">
+    <label>Dein Name<input id="m-name" value="${esc(state.name)}" maxlength="30"></label>
+    <p class="small-text">${state.results.length} Zeiten gespeichert (${sc} Kurzbahn, ${lc} Langbahn).</p>
+  </section>
+  ${themeHTML()}
+  <section class="card pad">
+    <h2 style="padding:0">📋 Zeiten importieren</h2>
+    <p class="small-text">Bestzeiten-Liste von der Vereins-Homepage oder aus dem PDF kopieren und hier einfügen. Zeiten, die schon da sind, werden übersprungen.</p>
+    <textarea id="m-paste" placeholder="Absolute Bestzeiten, Kurzbahn&#10;50 F 00:40,00 01.01.2026 Hallenbad&#10;…"></textarea>
+    <label>Wenn nicht angegeben, gilt die Liste für
+      <select id="m-course"><option value="SC">Kurzbahn</option><option value="LC">Langbahn</option></select></label>
+    <button class="primary" data-act="import-text">Zeiten übernehmen</button>
+  </section>
+  <section class="card pad">
+    <h2 style="padding:0">💾 Sicherung</h2>
+    <p class="small-text">Die Zeiten sind nur auf diesem Handy gespeichert. Mach ab und zu eine Sicherung, zum Beispiel vor einem Handywechsel.</p>
+    <button class="secondary" data-act="export">Sicherung herunterladen</button>
+    <button class="secondary" data-act="import-file">Sicherung einlesen</button>
+  </section>
+  <section class="card pad">
+    <h2 style="padding:0">📱 Als App installieren</h2>
+    <p class="small-text">In Chrome oben rechts auf ⋮ tippen und <b>„Zum Startbildschirm hinzufügen“</b> wählen. Danach öffnet sich die App wie jede andere und funktioniert auch im Schwimmbad ohne Internet.</p>
+  </section>
+  <button class="secondary danger" data-act="reset">Alle Zeiten löschen</button>`;
+}
+
+function render(scrollTop) {
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === ui.tab));
+  $('#hello').textContent = `Hallo ${state.name || 'du'} 👋`;
+  const titles = { best: 'Meine Bestzeiten', plan: 'Geplant', results: 'Ergebnisse', more: 'Einstellungen' };
+  $('#title').textContent = ui.detail ? 'Verlauf' : ui.meet || ui.plan ? 'Wettkampf' : titles[ui.tab];
+  $('#view').innerHTML = ui.detail ? detailHTML()
+    : ui.tab === 'best' ? bestHTML()
+    : ui.tab === 'plan' ? (ui.plan ? planDetailHTML() : plansHTML())
+    : ui.tab === 'results' ? (ui.meet ? meetDetailHTML() : resultsHTML())
+    : moreHTML();
+  if (scrollTop) window.scrollTo(0, 0);
+}
+
+// ---------- Geplante Wettkämpfe ----------
+// Plan: { id, meet, place, course, from, to, starts: [{ id, date, stroke, dist, wk, heat, lane, entry, resultId }] }
+function planDays(p) {
+  const days = [];
+  for (let t = Date.parse(p.from); t <= Date.parse(p.to || p.from) && days.length < 7; t += 864e5) days.push(new Date(t).toISOString().slice(0, 10));
+  return days;
+}
+const planEnd = p => p.to || p.from;
+const resultOf = s => s.resultId ? state.results.find(r => r.id === s.resultId) || null : null;
+const openStarts = p => p.starts.filter(s => !resultOf(s)).length;
+const weekday = d => new Date(d + 'T12:00').toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit' });
+const sortStarts = (a, b) => a.date.localeCompare(b.date) || (a.wk || 999) - (b.wk || 999);
+function countdown(p) {
+  const t = today();
+  if (t >= p.from && t <= planEnd(p)) return 'Heute! 🔥';
+  const n = Math.round(daysBetween(t, p.from));
+  return n === 1 ? 'Morgen!' : n > 1 ? `in ${n} Tagen` : '';
+}
+function nextPlan() {
+  return state.plans.filter(p => planEnd(p) >= today()).sort((a, b) => a.from.localeCompare(b.from))[0] || null;
+}
+
+function planCard(p, note) {
+  const n = p.starts.length;
+  return `<button class="card meet" data-act="plan" data-id="${p.id}">
+    <span class="info"><div class="d">${fmtRange(p.from, planEnd(p))} · ${COURSE_NAME[p.course]}</div>
+      <div class="p">${esc(p.meet)}</div>${p.place ? `<div class="s">${esc(p.place)}</div>` : ''}
+      <div class="s">${n} ${n === 1 ? 'Start' : 'Starts'}${note ? ' · ' + note : ''}</div></span>
+    <span class="chev">›</span></button>`;
+}
+
+function plansHTML() {
+  const t = today();
+  let h = `<button class="primary top-btn" data-act="new-plan">+ Wettkampf planen</button>
+    <button class="secondary top-btn" data-act="import-entries">📋 Meldungen aus WebClub einfügen</button>`;
+  if (!state.plans.length) {
+    return h + `<div class="empty">Hier legst du kommende Wettkämpfe an – mit deinen Starts, Wettkampfnummer, Lauf und Bahn.<br><br>Am Wettkampftag siehst du alles auf einen Blick und trägst direkt deine Zeiten ein.</div>`;
+  }
+  const byFrom = (a, b) => a.from.localeCompare(b.from);
+  const upcoming = state.plans.filter(p => planEnd(p) >= t).sort(byFrom);
+  const pending = state.plans.filter(p => planEnd(p) < t && openStarts(p)).sort(byFrom).reverse();
+  const done = state.plans.filter(p => planEnd(p) < t && !openStarts(p)).sort(byFrom).reverse();
+  if (upcoming.length) h += `<div class="lbl">Demnächst</div>` + upcoming.map(p => planCard(p, `<b class="cd">${countdown(p)}</b>`)).join('');
+  if (pending.length) h += `<div class="lbl">Zeiten fehlen noch</div>` + pending.map(p => {
+    const n = openStarts(p);
+    return planCard(p, `<b class="cd">noch ${n} ${n === 1 ? 'Zeit' : 'Zeiten'} eintragen</b>`);
+  }).join('');
+  if (done.length) h += `<div class="lbl">Erledigt</div>` + done.map(p => planCard(p, '✓ alle Zeiten da')).join('');
+  return h;
+}
+
+function startCard(p, s, flags) {
+  const r = resultOf(s), best = bestOf(p.course, s.stroke, s.dist);
+  const info = [s.entry ? `Meldezeit ${fmt(s.entry)}` : '', !r && best ? `Bestzeit ${fmt(best.time)}` : ''].filter(Boolean).join(' · ');
+  return `<section class="card start">
+    <button class="start-head" data-act="edit-start" data-id="${s.id}">
+      <span class="wk">WK<b>${s.wk || '–'}</b></span>
+      <span class="mid"><span class="rname">${STROKES[s.stroke].e} ${raceName(s)}</span>${info ? `<span class="meta">${info}</span>` : ''}</span>
+      <span class="pen">✏️</span></button>
+    <div class="ticket"><span><small>Lauf</small><b>${s.heat || '–'}</b></span><span><small>Bahn</small><b>${s.lane || '–'}</b></span></div>
+    ${r ? `<button class="row" data-act="edit" data-id="${r.id}">
+        <span class="mid"><span class="meta">Deine Zeit${r.rank ? ` · Platz ${r.rank}` : ''}</span><span class="time">${fmt(r.time)}</span></span>
+        ${pbBadge(flags[r.id])}</button>`
+      : `<button class="go" data-act="start-time" data-id="${s.id}">⏱ Zeit eintragen</button>`}
+  </section>`;
+}
+
+function planDetailHTML() {
+  const p = state.plans.find(x => x.id === ui.plan);
+  if (!p) { ui.plan = null; return plansHTML(); }
+  const flags = pbFlags(), days = planDays(p), starts = [...p.starts].sort(sortStarts);
+  const withTime = starts.filter(resultOf).length, cd = countdown(p);
+  let h = `<button class="back" data-act="back">‹ Alle geplanten Wettkämpfe</button>
+    <section class="card hero">
+      <div class="what">${fmtRange(p.from, planEnd(p))} · ${COURSE_NAME[p.course]}</div>
+      <div class="mname">${esc(p.meet)}</div>
+      ${p.place ? `<div class="since">${esc(p.place)}</div>` : ''}
+      ${cd ? `<div class="improve">${cd}</div>` : ''}
+      <div class="stats"><span><b>${starts.length}</b>${starts.length === 1 ? 'Start' : 'Starts'}</span><span class="pbs"><b>${withTime}</b>${withTime === 1 ? 'Zeit' : 'Zeiten'}</span></div>
+    </section>`;
+  if (!starts.length) h += `<div class="empty">Noch keine Starts eingetragen.<br>Tippe auf <b>+</b>, um deine Strecken hinzuzufügen.</div>`;
+  const groups = days.map(d => [weekday(d), starts.filter(s => s.date === d)]);
+  const outside = starts.filter(s => !days.includes(s.date));
+  if (outside.length) groups.push(['Anderer Tag', outside]);
+  for (const [label, list] of groups) {
+    if (!list.length) continue;
+    if (days.length > 1 || label === 'Anderer Tag') h += `<div class="lbl day">${label}</div>`;
+    h += list.map(s => startCard(p, s, flags)).join('');
+  }
+  return h + `<button class="secondary" data-act="new-start">+ Start hinzufügen</button>
+    <button class="secondary" data-act="import-entries">📋 Meldungen aus WebClub einfügen</button>
+    <button class="secondary" data-act="edit-plan">✏️ Wettkampf bearbeiten</button>
+    <button class="secondary danger" data-act="del-plan">Planung löschen</button>`;
+}
+
+const chipsHTML = (name, items, label) => items.map(x => `<button data-pick="${name}" data-v="${x}" class="${form[name] == x ? 'on' : ''}">${label(x)}</button>`).join('');
+function showSheet(inner) {
+  $('#sheet').innerHTML = `<div class="sheet-card">${inner}</div>`;
+  $('#sheet').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function openPlanSheet(p) {
+  sheetMode = 'plan'; editId = p ? p.id : null;
+  form.course = p ? p.course : 'SC';
+  const meets = [...new Set(state.results.map(x => x.meet).filter(Boolean))].sort();
+  const places = [...new Set(state.results.map(x => x.place).filter(Boolean))].sort();
+  showSheet(`
+    <div class="sheet-head"><h2>${p ? 'Wettkampf bearbeiten' : 'Wettkampf planen'}</h2><button data-act="close" aria-label="Schließen">✕</button></div>
+    <label>Name des Wettkampfs<input id="p-meet" list="meets" value="${esc(p ? p.meet : '')}" placeholder="z. B. 25. Beckumer Mannschafts-Pokal" autocomplete="off"></label>
+    <datalist id="meets">${meets.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+    <label>Ort<input id="p-place" list="places" value="${esc(p ? p.place : '')}" placeholder="z. B. Hallenbad Beckum" autocomplete="off"></label>
+    <datalist id="places">${places.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+    <div class="lbl">Becken</div><div class="chips">${chipsHTML('course', ['SC', 'LC'], x => x === 'SC' ? 'Kurzbahn 25 m' : 'Langbahn 50 m')}</div>
+    <div class="two even">
+      <label>Erster Tag<input type="date" id="p-from" value="${p ? p.from : today()}"></label>
+      <label>Letzter Tag<input type="date" id="p-to" value="${p && p.to !== p.from ? p.to : ''}"></label>
+    </div>
+    <p class="small-text">Bei eintägigen Wettkämpfen „Letzter Tag“ einfach leer lassen.</p>
+    <button class="primary" data-act="save">${p ? 'Speichern' : 'Anlegen und Starts eintragen'}</button>`);
+}
+function savePlan() {
+  const meet = $('#p-meet').value.trim(), place = $('#p-place').value.trim(), from = $('#p-from').value;
+  let to = $('#p-to').value;
+  if (!meet) return toast('Bitte den Namen des Wettkampfs eingeben.');
+  if (!from) return toast('Bitte den ersten Tag wählen.');
+  if (!to || to < from) to = from;
+  if (daysBetween(from, to) > 6) return toast('Ein Wettkampf kann höchstens 7 Tage dauern.');
+  let p = editId && state.plans.find(x => x.id === editId);
+  const isNew = !p;
+  if (p) Object.assign(p, { meet, place, course: form.course, from, to });
+  else { p = { id: uid(), meet, place, course: form.course, from, to, starts: [] }; state.plans.push(p); }
+  save(); closeSheet();
+  ui.tab = 'plan'; ui.plan = p.id; ui.detail = null; ui.meet = null;
+  render(true);
+  if (isNew) openStartSheet(p);
+}
+function deletePlan() {
+  const p = state.plans.find(x => x.id === ui.plan);
+  if (!p || !confirm(`Planung „${p.meet}“ löschen?\n\nSchon eingetragene Zeiten bleiben in deinen Ergebnissen.`)) return;
+  state.plans = state.plans.filter(x => x !== p);
+  ui.plan = null; save(); render(true); toast('Planung gelöscht.');
+}
+
+function openStartSheet(p, s) {
+  sheetMode = 'start'; editId = s ? s.id : null;
+  const days = planDays(p);
+  form.course = p.course;
+  if (s) Object.assign(form, { stroke: s.stroke, dist: s.dist, day: s.date });
+  else if (!days.includes(form.day)) form.day = days[0];
+  const num = (id, label, v, max) => `<label>${label}<input id="${id}" inputmode="numeric" maxlength="${max}" value="${v || ''}" placeholder="–"></label>`;
+  showSheet(`
+    <div class="sheet-head"><h2>${s ? 'Start bearbeiten' : 'Neuer Start'}</h2><button data-act="close" aria-label="Schließen">✕</button></div>
+    <p class="small-text">${esc(p.meet)} · ${COURSE_NAME[p.course]}</p>
+    ${days.length > 1 ? `<div class="lbl">Tag</div><div class="chips">${chipsHTML('day', days, weekday)}</div>` : ''}
+    <div class="lbl">Lage</div><div class="chips">${chipsHTML('stroke', ORDER, x => STROKES[x].e + ' ' + STROKES[x].n)}</div>
+    <div class="lbl">Strecke</div><div class="chips">${chipsHTML('dist', DISTS, x => x + ' m')}</div>
+    <div class="three">${num('s-wk', 'WK-Nr.', s && s.wk, 3)}${num('s-heat', 'Lauf', s && s.heat, 3)}${num('s-lane', 'Bahn', s && s.lane, 2)}</div>
+    <p class="small-text">Lauf und Bahn stehen oft erst kurz vorher im Meldeergebnis – die kannst du später nachtragen.</p>
+    <label>Meldezeit <span style="font-weight:400">(optional)</span><input id="s-entry" value="${s && s.entry ? fmt(s.entry) : ''}" placeholder="z. B. 1:26,50" autocomplete="off"></label>
+    <div class="hint" id="f-hint"></div>
+    <button class="primary" data-act="save">Speichern</button>
+    ${s ? `<button class="secondary danger" data-act="delete">Start löschen</button>` : `<button class="secondary" data-act="save-next">Speichern und nächsten Start</button>`}`);
+  updateHint();
+}
+function saveStart(next) {
+  const p = state.plans.find(x => x.id === ui.plan);
+  if (!p) return;
+  const int = id => parseInt($(id).value, 10) || null;
+  const entryText = $('#s-entry').value.trim(), entry = entryText ? parseTime(entryText) : null;
+  if (entryText && entry == null) return toast('Meldezeit bitte so eingeben: 1:26,50');
+  const days = planDays(p);
+  const fields = {
+    date: days.includes(form.day) ? form.day : days[0], stroke: form.stroke, dist: form.dist,
+    wk: int('#s-wk'), heat: int('#s-heat'), lane: int('#s-lane'), entry,
+  };
+  if (editId) Object.assign(p.starts.find(x => x.id === editId), fields);
+  else p.starts.push({ id: uid(), ...fields, resultId: null });
+  save(); closeSheet(); render();
+  if (next) { openStartSheet(p); toast('Gespeichert ✓ Jetzt der nächste Start.'); }
+}
+// ---------- Meldungen einfügen (WebClub: Öffentlich → Meldungen, Liste kopieren) ----------
+const LAGE = { Freistil: 'F', 'Rücken': 'R', Brust: 'B', Schmetterling: 'S', Lagen: 'L', 'D-Beine': 'DB', 'B-Beine': 'BB' };
+const isoDate = d => d.split('.').reverse().join('-');
+function parseEntries(text) {
+  // Überschrift: „Name ⏎ 17.10.2026 - 18.10.2026, Kurzbahn, Bielefeld“
+  const h = text.match(/^\s*(.+?)\s*\n\s*(\d{2}\.\d{2}\.\d{4})(?:\s*-\s*(\d{2}\.\d{2}\.\d{4}))?,\s*(Kurzbahn|Langbahn),\s*(.+?)\s*$/m);
+  const meet = h ? { meet: h[1].trim(), from: isoDate(h[2]), to: isoDate(h[3] || h[2]), course: h[4] === 'Langbahn' ? 'LC' : 'SC', place: h[5].trim() } : null;
+  // Zeilen: „7 ⇥ V ⇥ 50m Schmetterling ⇥ Nachname, Vorname ⇥ W ⇥ 2014 ⇥ 00:54,23“ (auch ohne Tabs/Zeilenumbrüche)
+  const flat = text.replace(/\s+/g, ' ');
+  const re = /(\d{1,3}) (?:[A-Z] )?(\d{2,4}) ?m (Freistil|Rücken|Brust|Schmetterling|Lagen|D-Beine|B-Beine) ([^\d]+?) [MWD] (\d{4})(?: (\d{1,2}:\d{2}[,.]\d{2}))?/g;
+  const rows = [...flat.matchAll(re)].map(m => ({ wk: +m[1], dist: +m[2], stroke: LAGE[m[3]], name: m[4].trim(), entry: m[6] ? parseTime(m[6]) : null }));
+  return { meet, rows };
+}
+
+let imp = null;
+function openImportSheet() {
+  sheetMode = 'import'; imp = null; editId = null;
+  showSheet(`
+    <div class="sheet-head"><h2>Meldungen einfügen</h2><button data-act="close" aria-label="Schließen">✕</button></div>
+    <ol class="steps">
+      <li>In WebClub <b>Öffentlich → Meldungen</b> öffnen und den Wettkampf antippen.</li>
+      <li>Die Liste ab der Überschrift (Wettkampfname) bis unten markieren und <b>Kopieren</b>.</li>
+      <li>Hier einfügen. Die App sucht deine Starts heraus.</li>
+    </ol>
+    <button class="secondary" data-act="paste-clip">📋 Aus Zwischenablage einfügen</button>
+    <textarea id="i-text" placeholder="Oder hier lange tippen → Einfügen"></textarea>
+    <button class="primary" data-act="parse-entries">Starts erkennen</button>
+    <div id="i-result"></div>`);
+}
+function parseImport() {
+  const { meet, rows } = parseEntries($('#i-text').value);
+  if (!rows.length) { $('#i-result').innerHTML = `<p class="warn">Keine Meldungen erkannt. Hast du die Meldeliste aus WebClub kopiert?</p>`; return; }
+  const names = [...new Set(rows.map(r => r.name))];
+  const me = (state.name || '').toLowerCase();
+  const cands = state.fullName && names.includes(state.fullName) ? [state.fullName] : names.filter(n => me && n.toLowerCase().includes(me));
+  imp = { meet, rows, cands, name: cands.length === 1 ? cands[0] : null };
+  renderImport();
+}
+function renderImport() {
+  const el = $('#i-result');
+  if (!imp.cands.length) {
+    el.innerHTML = `<p class="warn">${imp.rows.length} Meldungen erkannt, aber keine für „${esc(state.name)}“. Stimmt dein Name unter <b>Einstellungen</b>?</p>`;
+    return;
+  }
+  let h = imp.cands.length > 1 ? `<div class="lbl">Wer bist du?</div><div class="chips">${imp.cands.map(n =>
+    `<button data-act="imp-name" data-v="${esc(n)}" class="${imp.name === n ? 'on' : ''}">${esc(n)}</button>`).join('')}</div>` : '';
+  if (!imp.name) { el.innerHTML = h; return; }
+  const mine = imp.rows.filter(r => r.name === imp.name).sort((a, b) => a.wk - b.wk);
+  const m = imp.meet || {};
+  const match = state.plans.find(p => p.id === ui.plan) || state.plans.find(p => m.meet && p.meet === m.meet && p.from === m.from);
+  const upcoming = [...new Set([match, ...state.plans.filter(p => planEnd(p) >= today())])].filter(Boolean);
+  form.course = match ? match.course : m.course || 'SC';
+  h += `<div class="lbl">Deine Starts (${mine.length})</div>
+    <div class="card list">${mine.map(r => `<div class="mrow"><span class="wk sm">WK<b>${r.wk}</b></span>
+      <span class="n">${STROKES[r.stroke].e} ${raceName(r)}<small>Meldezeit ${r.entry ? fmt(r.entry) : '–'}</small></span></div>`).join('')}</div>
+    <label>Übernehmen in<select id="i-target"><option value="">Neuen Wettkampf anlegen</option>${upcoming.map(p =>
+      `<option value="${p.id}"${match && match.id === p.id ? ' selected' : ''}>${esc(p.meet)} (${fmtRange(p.from, planEnd(p))})</option>`).join('')}</select></label>
+    <div id="i-new" class="${match ? 'hidden' : ''}">
+      <label>Name des Wettkampfs<input id="i-meet" value="${esc(m.meet || '')}"></label>
+      <label>Ort<input id="i-place" value="${esc(m.place || '')}"></label>
+      <div class="lbl">Becken</div><div class="chips">${chipsHTML('course', ['SC', 'LC'], x => x === 'SC' ? 'Kurzbahn 25 m' : 'Langbahn 50 m')}</div>
+      <div class="two even">
+        <label>Erster Tag<input type="date" id="i-from" value="${m.from || ''}"></label>
+        <label>Letzter Tag<input type="date" id="i-to" value="${m.to && m.to !== m.from ? m.to : ''}"></label>
+      </div>
+    </div>
+    <button class="primary" data-act="apply-import">${mine.length} ${mine.length === 1 ? 'Start' : 'Starts'} übernehmen</button>`;
+  el.innerHTML = h;
+}
+function applyImport() {
+  const mine = imp.rows.filter(r => r.name === imp.name);
+  let p = state.plans.find(x => x.id === $('#i-target').value);
+  if (!p) {
+    const meet = $('#i-meet').value.trim(), place = $('#i-place').value.trim(), from = $('#i-from').value;
+    let to = $('#i-to').value;
+    if (!meet) return toast('Bitte den Namen des Wettkampfs eingeben.');
+    if (!from) return toast('Bitte den ersten Tag wählen.');
+    if (!to || to < from) to = from;
+    p = { id: uid(), meet, place, course: form.course, from, to, starts: [] };
+    state.plans.push(p);
+  }
+  let added = 0, updated = 0;
+  for (const r of mine) {
+    const s = p.starts.find(x => x.wk === r.wk && x.stroke === r.stroke && x.dist === r.dist);
+    if (s) { if (r.entry) s.entry = r.entry; updated++; }
+    else { p.starts.push({ id: uid(), date: p.from, stroke: r.stroke, dist: r.dist, wk: r.wk, heat: null, lane: null, entry: r.entry, resultId: null }); added++; }
+  }
+  state.fullName = imp.name;
+  save(); closeSheet();
+  ui.tab = 'plan'; ui.plan = p.id; ui.detail = null; ui.meet = null;
+  render(true);
+  toast(`${added} ${added === 1 ? 'Start' : 'Starts'} übernommen${updated ? `, ${updated} aktualisiert` : ''} ✓${planDays(p).length > 1 && added ? ' Bitte bei jedem Start den Tag prüfen.' : ''}`);
+}
+
+function deleteStart() {
+  const p = state.plans.find(x => x.id === ui.plan), s = p && p.starts.find(x => x.id === editId);
+  if (!s || !confirm(`Start „${raceName(s)}“ aus der Planung löschen?${resultOf(s) ? '\n\nDie eingetragene Zeit bleibt in deinen Ergebnissen.' : ''}`)) return;
+  p.starts = p.starts.filter(x => x !== s);
+  save(); closeSheet(); render();
+}
+
+// ---------- Zeit eintragen / bearbeiten ----------
+function openSheet(pre = {}) {
+  sheetMode = 'result'; linkTo = pre.link || null;
+  editId = pre.id || null;
+  const r = editId ? state.results.find(x => x.id === editId) : null;
+  const recent = lastEntry && Date.now() - lastEntry.at < 3 * 3600e3 ? lastEntry : null;
+  let v;
+  if (r) {
+    v = r;
+    Object.assign(form, { course: r.course, stroke: r.stroke, dist: r.dist });
+  } else {
+    v = { date: pre.date || recent?.date || today(), meet: pre.meet ?? recent?.meet ?? '', place: pre.place ?? recent?.place ?? '', rank: null };
+    if (pre.course || recent) form.course = pre.course || recent.course;
+    if (ui.detail) { const [c, st, d] = ui.detail.split('|'); Object.assign(form, { course: c, stroke: st, dist: +d }); }
+    if (pre.stroke) Object.assign(form, { stroke: pre.stroke, dist: pre.dist });
+  }
+  const t = r ? r.time : null;
+  const meets = [...new Set(state.results.map(x => x.meet).filter(Boolean))].sort();
+  const places = [...new Set(state.results.map(x => x.place).filter(Boolean))].sort();
+  const chips = (name, items, label) => items.map(x => `<button data-pick="${name}" data-v="${x}" class="${form[name] == x ? 'on' : ''}">${label(x)}</button>`).join('');
+  $('#sheet').innerHTML = `<div class="sheet-card">
+    <div class="sheet-head"><h2>${r ? 'Zeit bearbeiten' : 'Neue Zeit'}</h2><button data-act="close" aria-label="Schließen">✕</button></div>
+    <label>Datum<input type="date" id="f-date" value="${v.date}"></label>
+    <label>Wettkampf <span style="font-weight:400">(optional)</span><input id="f-meet" list="meets" value="${esc(v.meet)}" placeholder="z. B. Bezirksmeisterschaften" autocomplete="off"></label>
+    <datalist id="meets">${meets.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+    <div class="two">
+      <label>Ort<input id="f-place" list="places" value="${esc(v.place)}" placeholder="z. B. Hallenbad Beckum" autocomplete="off"></label>
+      <label>Platz<input id="f-rank" inputmode="numeric" maxlength="3" value="${v.rank || ''}" placeholder="–"></label>
+    </div>
+    <datalist id="places">${places.map(x => `<option value="${esc(x)}">`).join('')}</datalist>
+    <div class="lbl">Becken</div><div class="chips">${chips('course', ['SC', 'LC'], x => x === 'SC' ? 'Kurzbahn 25 m' : 'Langbahn 50 m')}</div>
+    <div class="lbl">Lage</div><div class="chips">${chips('stroke', ORDER, x => STROKES[x].e + ' ' + STROKES[x].n)}</div>
+    <div class="lbl">Strecke</div><div class="chips">${chips('dist', DISTS, x => x + ' m')}</div>
+    <div class="lbl">Zeit</div>
+    <div class="timein">
+      <div class="u"><input id="f-min" inputmode="numeric" maxlength="2" placeholder="0" value="${t != null ? Math.floor(t / 6000) : ''}">Min</div><span>:</span>
+      <div class="u"><input id="f-sec" inputmode="numeric" maxlength="2" placeholder="00" value="${t != null ? String(Math.floor(t / 100) % 60).padStart(2, '0') : ''}">Sek</div><span>,</span>
+      <div class="u"><input id="f-hun" inputmode="numeric" maxlength="2" placeholder="00" value="${t != null ? String(t % 100).padStart(2, '0') : ''}">Hundertstel</div>
+    </div>
+    <div class="hint" id="f-hint"></div>
+    <button class="primary" data-act="save">${r ? 'Änderung speichern' : 'Speichern'}</button>
+    ${r ? `<button class="secondary danger" data-act="delete">Diese Zeit löschen</button>` : ''}
+  </div>`;
+  $('#sheet').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  updateHint();
+}
+function closeSheet() { $('#sheet').classList.add('hidden'); document.body.style.overflow = ''; editId = null; linkTo = null; }
+function updateHint() {
+  if (!$('#f-hint')) return;
+  const b = bestOf(form.course, form.stroke, form.dist);
+  $('#f-hint').innerHTML = b ? `Deine Bestzeit: <b>${fmt(b.time)}</b> (${fmtDate(b.date)})` : `Noch keine Zeit auf dieser Strecke – die erste ist automatisch Bestzeit!`;
+}
+function saveResult() {
+  const date = $('#f-date').value, meet = $('#f-meet').value.trim(), place = $('#f-place').value.trim();
+  const rank = parseInt($('#f-rank').value, 10) || null;
+  const num = id => $(id).value.trim() === '' ? 0 : parseInt($(id).value, 10);
+  const mi = num('#f-min'), se = num('#f-sec'), hu = num('#f-hun');
+  if (!date) return toast('Bitte ein Datum wählen.');
+  if ([mi, se, hu].some(isNaN) || se > 59 || hu > 99) return toast('Die Zeit stimmt noch nicht ganz.');
+  const time = mi * 6000 + se * 100 + hu;
+  if (!time) return toast('Bitte eine Zeit eingeben.');
+  const fields = { course: form.course, stroke: form.stroke, dist: form.dist, time, date, meet, place, rank };
+
+  if (editId) {
+    const r = state.results.find(x => x.id === editId);
+    Object.assign(r, fields);
+    save(); closeSheet(); render();
+    return toast('Geändert ✓');
+  }
+  const prev = bestOf(form.course, form.stroke, form.dist);
+  const r = { id: uid(), ...fields };
+  state.results.push(r);
+  if (linkTo) {
+    const p = state.plans.find(x => x.id === linkTo.plan), s = p && p.starts.find(x => x.id === linkTo.start);
+    if (s) s.resultId = r.id;
+  }
+  lastEntry = { date, meet, place, course: form.course, at: Date.now() };
+  save(); closeSheet(); render();
+  if (!prev || time < prev.time) party(r, prev ? prev.time - time : null);
+  else toast(`Gespeichert! ${fmtDiff(time - prev.time)} über deiner Bestzeit – weiter so 💪`);
+}
+function deleteResult() {
+  const r = state.results.find(x => x.id === editId);
+  if (!r || !confirm(`Diese Zeit wirklich löschen?\n\n${raceName(r)}: ${fmt(r.time)} am ${fmtDate(r.date)}`)) return;
+  state.results = state.results.filter(x => x !== r);
+  save(); closeSheet(); render(); toast('Gelöscht.');
+}
+
+function party(r, diff) {
+  const colors = ['#f2643f', '#ffd23f', '#3bb3e6', '#5fd08f', '#b98cf5'];
+  let conf = '';
+  for (let i = 0; i < 70; i++) {
+    conf += `<i style="left:${Math.random() * 100}%;background:${colors[i % 5]};animation-delay:${(Math.random() * .9).toFixed(2)}s;animation-duration:${(2.2 + Math.random() * 1.6).toFixed(2)}s"></i>`;
+  }
+  $('#party').innerHTML = `${conf}<div class="party-card">
+    <div class="big">🏅</div><h2>Neue Bestzeit!</h2>
+    <p class="what">${raceName(r)} · ${COURSE_NAME[r.course]}</p>
+    <div class="ptime">${fmt(r.time)}</div>
+    <p class="pdiff">${diff != null ? `${fmtDiff(diff)} schneller als vorher!` : 'Deine erste Zeit auf dieser Strecke!'}</p>
+    <button class="primary" data-act="closeparty">Juhu! 🎉</button></div>`;
+  $('#party').classList.remove('hidden');
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.add('hidden'), 3200);
+}
+
+// ---------- Ereignisse ----------
+document.querySelector('.tabs').addEventListener('click', e => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
+  ui.tab = b.dataset.tab; ui.detail = null; ui.meet = null; ui.plan = null;
+  render(true);
+});
+$('#fab').addEventListener('click', () => {
+  if (ui.tab === 'plan' && !ui.detail) {
+    const p = ui.plan && state.plans.find(x => x.id === ui.plan);
+    return p ? openStartSheet(p) : openPlanSheet(null);
+  }
+  const g = ui.meet && !ui.detail && meetGroups().find(x => x.id === ui.meet);
+  openSheet(g ? meetPrefill(g) : {});
+});
+function meetPrefill(g) {
+  const r = g.results[g.results.length - 1];
+  return { date: g.to, meet: r.meet, place: r.place, course: r.course };
+}
+
+$('#view').addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'course') { ui.course = b.dataset.v; render(); }
+  else if (act === 'resview') { ui.resView = b.dataset.v; render(); }
+  else if (act === 'year') { ui.year = b.dataset.v; render(); }
+  else if (act === 'detail') { ui.detail = b.dataset.k; render(true); }
+  else if (act === 'meet') { ui.meet = b.dataset.id; render(true); }
+  else if (act === 'back') { if (ui.detail) ui.detail = null; else if (ui.meet) ui.meet = null; else ui.plan = null; render(true); }
+  else if (act === 'edit') openSheet({ id: b.dataset.id });
+  else if (act === 'plan') { ui.plan = b.dataset.id; render(true); }
+  else if (act === 'goto-more') { ui.tab = 'more'; render(true); setTimeout(() => $('#m-name') && $('#m-name').focus(), 50); }
+  else if (act === 'goto-plan') { ui.tab = 'plan'; ui.plan = b.dataset.id; render(true); }
+  else if (act === 'new-plan') openPlanSheet(null);
+  else if (act === 'edit-plan') openPlanSheet(state.plans.find(x => x.id === ui.plan));
+  else if (act === 'del-plan') deletePlan();
+  else if (act === 'import-entries') openImportSheet();
+  else if (act === 'preset') {
+    const v = b.dataset.v;
+    if (v === 'standard' && !bgPhoto()) { state.theme = null; save(); applyTheme(); }
+    else { const { n, ...colors } = PRESETS[v] || STANDARD; setTheme({ ...colors, preset: v }); }
+    render();
+  }
+  else if (act === 'bgcolor') {
+    const t = curTheme();
+    removePhoto(); setTheme({ bg: b.dataset.v, photo: false, preset: null, head: t.photo ? t.ink : t.head }); render();
+  }
+  else if (act === 'pick-photo') $('#m-photo').click();
+  else if (act === 'del-photo') { removePhoto(); setTheme({ photo: false, head: curTheme().ink }); render(); }
+  else if (act === 'theme-reset') { removePhoto(); state.theme = null; save(); applyTheme(); render(); toast('Aussehen zurückgesetzt.'); }
+  else if (act === 'new-start' || act === 'edit-start' || act === 'start-time') {
+    const p = state.plans.find(x => x.id === ui.plan);
+    if (!p) return;
+    const s = b.dataset.id && p.starts.find(x => x.id === b.dataset.id);
+    if (act === 'start-time') openSheet({ date: s.date, meet: p.meet, place: p.place, course: p.course, stroke: s.stroke, dist: s.dist, link: { plan: p.id, start: s.id } });
+    else openStartSheet(p, s || null);
+  }
+  else if (act === 'add-to-meet') { const g = meetGroups().find(x => x.id === ui.meet); if (g) openSheet(meetPrefill(g)); }
+  else if (act === 'rename-meet') {
+    const g = meetGroups().find(x => x.id === ui.meet);
+    if (!g) return;
+    const name = prompt('Wie heißt der Wettkampf?\n(z. B. „Bezirksmeisterschaften Kurzbahn“)', g.hasName ? g.name : '');
+    if (name == null) return;
+    for (const r of g.results) r.meet = name.trim();
+    save();
+    ui.meet = ((name.trim() || g.places[0] || 'Ohne Ort').toLowerCase()) + '|' + g.from;
+    render();
+  }
+  else if (act === 'import-text') {
+    const rows = parseText($('#m-paste').value, $('#m-course').value);
+    if (!rows.length) return toast('Keine Zeiten erkannt. Ist das die Bestzeiten-Liste?');
+    const n = addRows(state, rows); save(); render();
+    toast(n ? `${n} neue ${n === 1 ? 'Zeit' : 'Zeiten'} übernommen ✓` : `Alle ${rows.length} Zeiten waren schon da.`);
+  }
+  else if (act === 'export') {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = `bestzeiten-${today()}.json`; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  else if (act === 'import-file') $('#m-file').click();
+  else if (act === 'reset') {
+    if (confirm('Wirklich ALLE Zeiten löschen? Das kann man nicht rückgängig machen.') && confirm('Ganz sicher? Hast du eine Sicherung?')) {
+      state.results = []; save(); render(); toast('Alle Zeiten gelöscht.');
+    }
+  }
+});
+// Farbwähler und Regler: sofort anwenden, ohne neu zu zeichnen (sonst schließt sich der Farbwähler)
+$('#view').addEventListener('input', e => {
+  const key = e.target.dataset.themeKey;
+  if (!key) return;
+  setTheme(key === 'dim' ? { dim: +e.target.value } : { [key]: e.target.value, preset: null });
+});
+$('#view').addEventListener('change', e => {
+  if (e.target.id === 'm-name') { state.name = e.target.value.trim(); save(); render(); }
+  if (e.target.id === 'm-photo' && e.target.files[0]) loadPhoto(e.target.files[0]);
+});
+// Sicherung einlesen: Zeiten und Planungen ergänzen; Name und Farben nur übernehmen, wenn noch keine gesetzt sind
+$('#m-file').addEventListener('change', e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  file.text().then(txt => {
+    const data = JSON.parse(txt);
+    if (!data || !Array.isArray(data.results)) throw new Error();
+    const n = addRows(state, data.results);
+    if (Array.isArray(data.plans)) for (const p of data.plans) if (!state.plans.some(x => x.id === p.id)) state.plans.push(p);
+    if (!state.name && data.name) state.name = data.name;
+    if (!state.fullName && data.fullName) state.fullName = data.fullName;
+    if (!state.theme && data.theme) { const { photo, ...t } = data.theme; state.theme = { ...t, photo: false }; }
+    save(); applyTheme(); render(true);
+    toast(`${n} ${n === 1 ? 'Zeit' : 'Zeiten'} aus der Sicherung übernommen ✓`);
+  }).catch(() => toast('Diese Datei ist keine gültige Sicherung.'));
+});
+
+$('#sheet').addEventListener('click', e => {
+  if (e.target === $('#sheet')) return closeSheet();
+  const pick = e.target.closest('[data-pick]');
+  if (pick) {
+    const name = pick.dataset.pick;
+    form[name] = name === 'dist' ? +pick.dataset.v : pick.dataset.v;
+    pick.parentElement.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === pick));
+    return updateHint();
+  }
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const act = b.dataset.act;
+  if (act === 'close') closeSheet();
+  if (act === 'save') ({ result: saveResult, plan: savePlan, start: () => saveStart(false) })[sheetMode]();
+  if (act === 'save-next') saveStart(true);
+  if (act === 'parse-entries') parseImport();
+  if (act === 'imp-name') { imp.name = b.dataset.v; renderImport(); }
+  if (act === 'apply-import') applyImport();
+  if (act === 'paste-clip') {
+    if (!navigator.clipboard || !navigator.clipboard.readText) return toast('Bitte lange ins Feld tippen und „Einfügen“ wählen.');
+    navigator.clipboard.readText().then(t => { $('#i-text').value = t; parseImport(); })
+      .catch(() => toast('Kein Zugriff – bitte lange ins Feld tippen und „Einfügen“ wählen.'));
+  }
+  if (act === 'delete') (sheetMode === 'start' ? deleteStart : deleteResult)();
+});
+$('#sheet').addEventListener('change', e => {
+  if (e.target.id === 'i-target') $('#i-new').classList.toggle('hidden', !!e.target.value);
+});
+// Zahlenfelder: nur Ziffern; nach zwei Sekunden-Ziffern zu den Hundertsteln springen
+const DIGIT_FIELDS = { 'f-min': 2, 'f-sec': 2, 'f-hun': 2, 'f-rank': 3, 's-wk': 3, 's-heat': 3, 's-lane': 2 };
+$('#sheet').addEventListener('input', e => {
+  const el = e.target;
+  if (!DIGIT_FIELDS[el.id]) return;
+  el.value = el.value.replace(/\D/g, '').slice(0, DIGIT_FIELDS[el.id]);
+  if (el.id === 'f-sec' && el.value.length === 2) $('#f-hun').focus();
+});
+
+$('#party').addEventListener('click', e => {
+  if (e.target.closest('[data-act="closeparty"]') || e.target === $('#party')) $('#party').classList.add('hidden');
+});
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+applyTheme();
+render();
+</script>
+</body>
+</html>
